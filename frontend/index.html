@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Purchasing Agent — Console</title>
+<style>
+  :root {
+    --ink: #1c2128;
+    --paper: #f6f4ee;
+    --panel: #ffffff;
+    --line: #dcd7c9;
+    --amber: #b8791a;
+    --amber-deep: #8a5a10;
+    --green: #2e6b47;
+    --red: #a3352b;
+    --slate: #5c6570;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  header .tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--slate);
+  }
+  .api-config {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--slate);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .api-config input {
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px solid var(--line);
+    padding: 4px 6px;
+    width: 200px;
+    background: var(--panel);
+  }
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 32px 80px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  section > .head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  section > .head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  section > .body { padding: 18px; }
+
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .scenario-btn {
+    text-align: left;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 12px 14px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink);
+    transition: border-color .15s ease;
+  }
+  .scenario-btn:hover { border-color: var(--amber); }
+  .scenario-btn .sku {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber-deep);
+    margin-bottom: 4px;
+  }
+
+  .manual-form {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    align-items: end;
+  }
+  .manual-form label {
+    font-size: 12px;
+    color: var(--slate);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .manual-form select, .manual-form input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--line);
+    font-family: var(--sans);
+    font-size: 13px;
+    background: var(--paper);
+  }
+  button.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 9px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button.primary:hover { background: var(--amber-deep); }
+
+  .decision-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 2px;
+    letter-spacing: .02em;
+  }
+  .badge-ACCEPT { background: #e2efe6; color: var(--green); }
+  .badge-MODIFY { background: #fbeed9; color: var(--amber-deep); }
+  .badge-REJECT { background: #f6e2df; color: var(--red); }
+  .badge-INVESTIGATE { background: #e6e9ef; color: var(--slate); }
+
+  .result-empty { color: var(--slate); font-size: 13px; }
+  .result-row { margin-bottom: 10px; font-size: 14px; }
+  .result-row .k { color: var(--slate); font-size: 12px; margin-bottom: 2px; }
+  .explanation {
+    font-size: 13.5px;
+    background: var(--paper);
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    margin-top: 10px;
+  }
+  details { margin-top: 10px; }
+  summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--slate);
+    font-family: var(--mono);
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: var(--ink);
+    color: #d8dee9;
+    padding: 12px;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--slate); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .approve-btn, .reject-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 4px 9px;
+    cursor: pointer;
+    margin-right: 6px;
+  }
+  .approve-btn:hover { border-color: var(--green); color: var(--green); }
+  .reject-btn:hover { border-color: var(--red); color: var(--red); }
+  .empty-note { color: var(--slate); font-size: 13px; font-style: italic; }
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 7px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AI Purchasing Agent</h1>
+    <div class="tag">demo console — investigate, decide, validate, approve</div>
+  </div>
+  <div class="api-config">
+    API base: <input id="apiBase" value="http://localhost:8000" />
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="head"><h2>Run a scenario</h2></div>
+    <div class="body">
+      <div id="scenarioGrid" class="scenario-grid"><span class="empty-note">Loading scenarios…</span></div>
+
+      <div style="margin-top:20px; border-top:1px solid var(--line); padding-top:16px;">
+        <div class="manual-form">
+          <div>
+            <label>Product</label>
+            <select id="productSelect"></select>
+          </div>
+          <div>
+            <label>Node</label>
+            <select id="nodeSelect"></select>
+          </div>
+          <div>
+            <label>Recommended qty</label>
+            <input id="qtyInput" type="number" value="500" />
+          </div>
+          <div>
+            <button class="primary" onclick="runAgent()">Run agent →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Agent result</h2></div>
+    <div class="body" id="resultPanel">
+      <div class="result-empty">Run a scenario above to see the agent's decision, its reasoning, and the full tool-call trail.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Pending human approval</h2>
+      <button class="approve-btn" onclick="loadPending()">refresh</button>
+    </div>
+    <div class="body" id="pendingPanel">
+      <div class="empty-note">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<script>
+let apiBase = document.getElementById('apiBase').value;
+document.getElementById('apiBase').addEventListener('change', e => { apiBase = e.target.value; init(); });
+
+let catalog = { products: [], nodes: [], demo_scenarios: [] };
+
+async function init() {
+  try {
+    const res = await fetch(apiBase + '/catalog');
+    catalog = await res.json();
+    renderScenarios();
+    renderSelects();
+    loadPending();
+  } catch (e) {
+    document.getElementById('scenarioGrid').innerHTML =
+      '<span class="empty-note">Could not reach the API at ' + apiBase + '. Is the backend running? (uvicorn app.api.main:app)</span>';
+  }
+}
+
+function renderScenarios() {
+  const grid = document.getElementById('scenarioGrid');
+  grid.innerHTML = '';
+  catalog.demo_scenarios.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'scenario-btn';
+    btn.innerHTML = `<span class="sku">${s.scenario_tag}</span>${s.label}`;
+    btn.onclick = () => runAgent(s);
+    grid.appendChild(btn);
+  });
+}
+
+function renderSelects() {
+  const p = document.getElementById('productSelect');
+  const n = document.getElementById('nodeSelect');
+  p.innerHTML = catalog.products.map(x => `<option value="${x.id}">${x.name} (${x.sku})</option>`).join('');
+  n.innerHTML = catalog.nodes.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+}
+
+async function runAgent(preset) {
+  const body = preset ? {
+    product_id: preset.product_id, node_id: preset.node_id,
+    recommended_qty: preset.recommended_qty, scenario_tag: preset.scenario_tag,
+  } : {
+    product_id: parseInt(document.getElementById('productSelect').value),
+    node_id: parseInt(document.getElementById('nodeSelect').value),
+    recommended_qty: parseFloat(document.getElementById('qtyInput').value),
+    scenario_tag: 'manual',
+  };
+
+  const panel = document.getElementById('resultPanel');
+  panel.innerHTML = '<div class="result-empty">Running…</div>';
+
+  try {
+    const res = await fetch(apiBase + '/agent/decide', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    renderResult(body, data);
+    loadPending();
+  } catch (e) {
+    panel.innerHTML = '<div class="result-empty">Request failed: ' + e + '</div>';
+  }
+}
+
+function renderResult(input, data) {
+  const panel = document.getElementById('resultPanel');
+  const badge = `<span class="decision-badge badge-${data.decision}">${data.decision}</span>`;
+  panel.innerHTML = `
+    <div class="result-row">
+      <div class="k">Input</div>
+      product_id=${input.product_id}, node_id=${input.node_id}, recommended_qty=${input.recommended_qty}
+    </div>
+    <div class="result-row">
+      <div class="k">Decision</div>
+      ${badge} &nbsp; final qty: <strong>${data.final_qty === null ? '—' : data.final_qty}</strong>
+      &nbsp; ${data.requires_human_approval ? '<span class="status-pill" style="color:var(--amber-deep)">needs approval</span>' : '<span class="status-pill" style="color:var(--green)">auto-executed / no action needed</span>'}
+    </div>
+    <div class="explanation">${data.explanation}</div>
+    <details>
+      <summary>Full tool-call + validation trail (${data.trail.length} steps)</summary>
+      <pre>${JSON.stringify(data.trail, null, 2)}</pre>
+    </details>
+  `;
+}
+
+async function loadPending() {
+  const panel = document.getElementById('pendingPanel');
+  try {
+    const res = await fetch(apiBase + '/purchase-orders?status=pending_approval');
+    const rows = await res.json();
+    if (!rows.length) {
+      panel.innerHTML = '<div class="empty-note">Nothing waiting on a human right now.</div>';
+      return;
+    }
+    panel.innerHTML = `
+      <table>
+        <thead><tr><th>PO#</th><th>Scenario</th><th>Qty</th><th>Reason</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>#${r.id}</td>
+              <td>${r.scenario_tag || '—'}</td>
+              <td>${r.quantity}</td>
+              <td style="max-width:360px;font-size:12px;color:var(--slate)">${(r.reason || '').slice(0, 160)}</td>
+              <td>
+                <button class="approve-btn" onclick="decidePO(${r.id}, 'approve')">approve</button>
+                <button class="reject-btn" onclick="decidePO(${r.id}, 'reject')">reject</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    panel.innerHTML = '<div class="empty-note">Could not load pending purchase orders.</div>';
+  }
+}
+
+async function decidePO(id, action) {
+  await fetch(`${apiBase}/purchase-orders/${id}/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approver_note: 'via demo console' }),
+  });
+  loadPending();
+}
+
+init();
+</script>
+</body>
+</html>
