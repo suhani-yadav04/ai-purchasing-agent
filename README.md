@@ -7,8 +7,8 @@ own proposed purchase order against those same constraints, and
 **automatically replans if validation fails** — escalating to a human only
 when it genuinely can't resolve things on its own.
 
-Built for the Rappi AI Purchasing Agent assignment. Implements **Scenario 1**
-(recommendation review) and **Scenario 4** (purchasing constraints) end to
+Built for the Rappi AI Purchasing Agent . Implements **Scenario 1**
+and **Scenario 4** (purchasing constraints) end to
 end, including the self-correcting feedback loop, plus the missing-data
 "investigate" path (touches Scenario 3) and a supplier-shortfall style
 rejection + escalation path (touches Scenario 2).
@@ -41,38 +41,40 @@ for what an `ANTHROPIC_API_KEY` does and does not change.
 
 ---
 
-## 2. What the agent actually does
+## 2.How the AI Purchasing Agent Works
 
-For a given `(product, node, recommended_qty)`:
+The agent investigates the situation, calculates a feasible quantity, makes a decision, independently validates it, and automatically replans if validation fails before executing the purchas
+The agent follows a simple decision-making and validation flow:
 
-1. **Investigate** — calls 6 read-only tools: `check_inventory`,
-   `check_demand`, `check_open_purchase_orders`, `check_supplier`,
-   `check_budget`, `check_storage`.
-2. **Missing-data guard** — if demand forecast, supplier info, budget, or
-   storage data isn't available, the agent stops and returns
-   `INVESTIGATE` rather than guessing. (This is the Oil/001-style scenario:
-   a forecast simply isn't on file.)
-3. **Compute** — derives `net_need = demand − inventory − open_POs`, and a
-   hard `max_feasible` quantity as the minimum of what budget, storage, and
-   the supplier can actually support.
-4. **Decide**:
-   - `max_feasible` below the supplier's minimum order → **REJECT**, escalate.
-   - recommendation is feasible and close to net need → **ACCEPT**.
-   - otherwise → **MODIFY** toward `min(recommended, net_need)`.
-5. **Create + validate** — a draft purchase order is created and run through
-   an **independent validation engine** (`validate_purchase_order`) that
-   re-derives budget/storage/supplier limits from the database itself. This
-   engine has no knowledge of how the quantity was chosen — it will happily
-   reject a number the decision step got wrong.
-6. **Replan on failure** — if validation fails, the agent shrinks the
-   quantity to the tightest violated constraint and re-validates (up to 3
-   attempts) before giving up and escalating. **This is the core
-   interview-differentiator**: a purchasing decision that survives contact
-   with its own safety check.
-7. **Human-approval gate** — `ACCEPT` never needs a human. `REJECT` always
-   does. `MODIFY` auto-executes only if the resulting order's dollar value is
-   below a policy threshold ($1,000) — small, in-policy corrections don't
-   need a person; larger ones do.
+1. **Investigate**
+   - Checks inventory, demand, open purchase orders, supplier availability, budget, and storage capacity.
+
+2. **Check Missing Data**
+   - If important information is missing, the agent stops instead of making an unsafe purchasing decision.
+
+3. **Calculate**
+   - Calculates the actual quantity needed and the maximum quantity that can be purchased within the available constraints.
+
+4. **Make a Decision**
+   - **ACCEPT** – the recommendation is feasible.
+   - **MODIFY** – the quantity needs to be adjusted.
+   - **REJECT** – the purchase cannot be safely fulfilled.
+
+5. **Create & Validate PO**
+   - Creates the proposed purchase order and independently validates it against budget, storage, and supplier constraints.
+
+6. **Replan on Failure**
+   - If validation fails, the agent automatically adjusts the quantity and validates again, up to 3 attempts.
+
+7. **Human Approval**
+   - Safe, low-value decisions can be automatically executed.
+   - Higher-value or sensitive decisions require human approval.
+
+### In Short
+
+> **Investigate → Calculate → Decide → Validate → Replan if needed → Execute / Ask for Approval**
+
+This makes the agent more than a chatbot: it can **reason over purchasing data, use tools, make decisions, validate its actions, and recover when a proposed purchase fails validation.**
 
 Every step is logged to an `AgentRun` audit row (`trail_json`) — this is what
 the frontend's "full tool-call + validation trail" panel renders, and it's
@@ -181,3 +183,7 @@ ARCHITECTURE.md
 
 See `ARCHITECTURE.md` for a system diagram and a written walkthrough of the
 feedback loop.
+
+Suhani Yadav
+Suhaniyadav1802@gmail.com
+
